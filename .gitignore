@@ -1,0 +1,9 @@
+﻿.ipynb_checkpoints
+__pycache__
+
+*.csv
+nohup.out
+
+
+.idea/
+
