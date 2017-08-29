@@ -12,13 +12,14 @@ def create_gaussian_design(data, means, sigma, i, j):
     # `means` is the means of kernels
     n = len(data)
     d = len(data[0])
+    mask = np.logical_and(np.arange(d) != i, np.arange(d) != j)
     A = np.transpose([scipy.stats.multivariate_normal.pdf(x=data, mean=mean, cov=np.eye(d) * sigma) for mean in means])
     b_x = np.sum([scipy.stats.norm.pdf(x=data[:, i], loc=mean[i], scale=sigma) for mean in means], axis=1)
     b_y = np.sum([scipy.stats.norm.pdf(x=data[:, j], loc=mean[j], scale=sigma) for mean in means], axis=1)
-    mask = np.logical_and(np.arange(d) != i, np.arange(d) != j)
     b_z = np.sum([scipy.stats.norm.pdf(x=data[:, mask], loc=mean[mask], scale=sigma) for mean in means], axis=1)
-    b_xyz = np.sum(A, axis=0)
-    b = (b_x * b_y * b_z - b_xyz) / n / (n - 1) / (n - 2)
+    # b_xyz = np.sum(A, axis=0)
+    # b = (b_x * b_y * b_z - b_xyz) / n / (n - 1) / (n - 2)
+    b = b_x * b_y * b_z / n**3
     return A, b
 
 
@@ -45,9 +46,9 @@ def theoretical_mutual_information(cov): # wrong
     return 0.5 * (np.sum(np.log(np.diag(cov))) - np.log(np.linalg.det(cov)))
 
 
-def approximated_mutual_information(x, i, j, n_b=200):
+def approximated_conditional_mutual_information(x, i, j, n_b=200):
     means = select_centroids(x, n_b)
-    A, b = create_gaussian_design(x, means, sigma=1, i=i, j=j)
+    A, b = create_gaussian_design(x, means, sigma=2, i=i, j=j)
 
     fun = create_objective_function(A)
     jac = create_derivative_function(A)
@@ -57,5 +58,6 @@ def approximated_mutual_information(x, i, j, n_b=200):
     alpha0 = np.random.uniform(0, 1, n_b)
     result = scipy.optimize.minimize(fun=fun, jac=jac, x0=alpha0, bounds=bounds, constraints=constraints,
                                      method='SLSQP') #SLSQP, COBYLA
+    print(result)
     alpha = result.x
     return np.mean(np.log(A.dot(alpha)))
