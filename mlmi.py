@@ -53,31 +53,3 @@ def mutual_information(X, Y, sigma=1, n_b=200, maxiter=200):
     alpha = result.x
     return np.mean(np.log(A.dot(alpha)))
 
-
-def create_gaussian_design_old(X, means, sigma):
-    n, d = X.shape
-    cov = sigma ** 2 * np.eye(2)
-    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=X, mean=mean, cov=cov) for mean in means])
-    b_x = np.sum([scipy.stats.norm.pdf(x=X[:, 0], loc=mean[0], scale=sigma) for mean in means], axis=1)
-    b_y = np.sum([scipy.stats.norm.pdf(x=X[:, 1], loc=mean[1], scale=sigma) for mean in means], axis=1)
-    b_xy = np.sum(A, axis=0)
-    b = (b_x * b_y - b_xy) / (n ** 2 - n)
-    return A, b
-
-
-def mutual_information_old(X, sigma=1, n_b=200, maxiter=200):
-    means = sklearn.cluster.KMeans(n_b).fit(X).cluster_centers_
-    A, b = create_gaussian_design_old(X, means, sigma)
-    
-    fun = create_objective_function(A)
-    jac = create_derivative_function(A)
-    bounds = [(0, None)] * n_b
-    constraints = [{'type': 'eq', 'fun': lambda alpha: alpha.dot(b) - 1}]
-
-    alpha0 = np.random.uniform(0, 1, n_b)
-    result = scipy.optimize.minimize(fun=fun, jac=jac, x0=alpha0, bounds=bounds, constraints=constraints, options={'maxiter': maxiter})
-    if not result.success:
-        raise Exception('Optimization failed.')
-    alpha = result.x
-    return np.mean(np.log(A.dot(alpha)))
-

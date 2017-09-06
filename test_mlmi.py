@@ -7,16 +7,14 @@ import mlmi
 
 
 class TestMlmi(TestCase):
-    def test_create_gaussian_design(self):
-        n_b = 200
-        sigma = 1
-        cov = np.array([[1, 0.5], [0.5, 1]])
-        X = scipy.stats.multivariate_normal(mean=[0, 0], cov=cov).rvs(3000)
-        means = sklearn.cluster.KMeans(n_b).fit(X).cluster_centers_
-        U, V = np.split(means, [1], axis=1)
-        
-        A, b = mlmi.create_gaussian_design(X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1), U, V, sigma)
-        A_old, b_old = mlmi.create_gaussian_design_old(X, means, sigma)
-        
-        self.assertTrue(np.all(A - A_old < 1e-6))
-        self.assertTrue(np.all(b - b_old < 1e-6))
+    def test_mlmi(self):
+        for c in np.arange(0, 0.5, 0.1):
+            cov = np.array([[1, c], [c, 1]])
+            X = scipy.stats.multivariate_normal(mean=[0, 0], cov=cov).rvs(1000)
+            ami = mlmi.mutual_information(X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1), n_b=200, maxiter=1000)
+            tmi = 0.5 * (np.sum(np.log(np.diag(cov))) - np.log(np.linalg.det(cov)))
+            print('ami: %.4f, tmi: %.4f, error: %.4f' % (ami, tmi, abs(ami - tmi)))
+            self.assertAlmostEqual(ami, tmi, delta=0.05)
+
+            
+            
