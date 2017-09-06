@@ -6,7 +6,8 @@ import sklearn.cluster
 
 def create_gaussian_design(X, means, sigma):
     n, d = X.shape
-    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=X, mean=mean, cov=np.eye(3) * sigma) for mean in means])
+    cov = np.eye(3) * sigma
+    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=X, mean=mean, cov=cov) for mean in means])
     b_x = np.sum([scipy.stats.norm.pdf(x=X[:, 0], loc=mean[0], scale=sigma) for mean in means], axis=1)
     b_y = np.sum([scipy.stats.norm.pdf(x=X[:, 1], loc=mean[1], scale=sigma) for mean in means], axis=1)
     b_z = np.sum([scipy.stats.norm.pdf(x=X[:, 2], loc=mean[2], scale=sigma) for mean in means], axis=1)

@@ -1,15 +1,15 @@
+import numpy as np
 import scipy.stats
 import scipy.optimize
-import numpy as np
 import sklearn.cluster
 
 
-def create_gaussian_design(x, means, sigma):
-    n = len(x)
+def create_gaussian_design(X, means, sigma):
+    n, d = X.shape
     cov = np.eye(2) * sigma
-    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=x, mean=mean, cov=cov) for mean in means])
-    b_x = np.sum([scipy.stats.norm.pdf(x=x[:, 0], loc=mean[0], scale=cov[0, 0]) for mean in means], axis=1)
-    b_y = np.sum([scipy.stats.norm.pdf(x=x[:, 1], loc=mean[1], scale=cov[1, 1]) for mean in means], axis=1)
+    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=X, mean=mean, cov=cov) for mean in means])
+    b_x = np.sum([scipy.stats.norm.pdf(x=X[:, 0], loc=mean[0], scale=cov[0, 0]) for mean in means], axis=1)
+    b_y = np.sum([scipy.stats.norm.pdf(x=X[:, 1], loc=mean[1], scale=cov[1, 1]) for mean in means], axis=1)
     b_xy = np.sum(A, axis=0)
     b = (b_x * b_y - b_xy) / n / (n - 1)
     return A, b
@@ -23,9 +23,9 @@ def create_derivative_function(A):
     return lambda alpha: -A.transpose().dot(1 / A.dot(alpha))
 
 
-def mutual_information(x, n_b=200, maxiter=200):
-    means = sklearn.cluster.KMeans(n_b).fit(x).cluster_centers_
-    A, b = create_gaussian_design(x, means, 1)
+def mutual_information(X, n_b=200, maxiter=200):
+    means = sklearn.cluster.KMeans(n_b).fit(X).cluster_centers_
+    A, b = create_gaussian_design(X, means, 1)
 
     fun = create_objective_function(A)
     jac = create_derivative_function(A)
