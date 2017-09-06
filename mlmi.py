@@ -1,3 +1,4 @@
+import pdb
 import numpy as np
 import scipy.stats
 import scipy.optimize
@@ -35,6 +36,7 @@ def mutual_information(X, Y, sigma=1, n_b=200, maxiter=200):
     n_y, d_y = Y.shape
     if n_x != n_y:
         raise Exception('Invalid argument: the lengths of X and Y must be the same.')
+    
     means = sklearn.cluster.KMeans(n_b).fit(np.hstack([X, Y])).cluster_centers_
     U, V = np.split(means, [d_x], axis=1)
     A, b = create_gaussian_design(X, Y, U, V, sigma)
@@ -78,5 +80,4 @@ def mutual_information_old(X, sigma=1, n_b=200, maxiter=200):
         raise Exception('Optimization failed.')
     alpha = result.x
     return np.mean(np.log(A.dot(alpha)))
-
 
