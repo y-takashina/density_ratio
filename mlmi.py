@@ -4,6 +4,14 @@ import scipy.optimize
 import sklearn.cluster
 
 
+def create_objective_function(A):
+    return lambda alpha: -np.sum(np.log(A.dot(alpha)))
+
+
+def create_derivative_function(A):
+    return lambda alpha: -A.transpose().dot(1 / A.dot(alpha))
+
+
 def create_gaussian_design(X, Y, U, V, sigma):
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
@@ -22,26 +30,14 @@ def create_gaussian_design(X, Y, U, V, sigma):
     return A, b
 
 
-def create_objective_function(A):
-    return lambda alpha: -np.sum(np.log(A.dot(alpha)))
-
-
-def create_derivative_function(A):
-    return lambda alpha: -A.transpose().dot(1 / A.dot(alpha))
-
-
-def mutual_information(X, Y, n_b=200, maxiter=200):
+def mutual_information(X, Y, sigma=1, n_b=200, maxiter=200):
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
     if n_x != n_y:
         raise Exception('Invalid argument: the lengths of X and Y must be the same.')
     means = sklearn.cluster.KMeans(n_b).fit(np.hstack([X, Y])).cluster_centers_
     U, V = np.split(means, [d_x], axis=1)
-    A, b = create_gaussian_design(X, Y, U, V, 1)
-    
-    #A2, b2 = create_gaussian_design_old(np.hstack([X, Y]), means, 1)
-    #print(np.all(A - A2 < 1e-6))
-    #print(np.all(b - b2 < 1e-6))
+    A, b = create_gaussian_design(X, Y, U, V, sigma)
     
     fun = create_objective_function(A)
     jac = create_derivative_function(A)
@@ -69,7 +65,7 @@ def create_gaussian_design_old(X, means, sigma):
 
 def mutual_information_old(X, sigma=1, n_b=200, maxiter=200):
     means = sklearn.cluster.KMeans(n_b).fit(X).cluster_centers_
-    A, b = create_gaussian_design_old(X, means, 1)
+    A, b = create_gaussian_design_old(X, means, sigma)
     
     fun = create_objective_function(A)
     jac = create_derivative_function(A)
