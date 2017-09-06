@@ -30,7 +30,7 @@ def mutual_information(x, n_b=200):
 
     fun = create_objective_function(A)
     jac = create_derivative_function(A)
-    bounds = [(0, None) for _ in range(n_b)]
+    bounds = [(0, None)] * n_b
     constraints = [{'type': 'eq', 'fun': lambda alpha: alpha.dot(b) - 1}]
 
     alpha0 = np.random.uniform(0, 1, n_b)
