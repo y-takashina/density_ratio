@@ -22,12 +22,13 @@ def create_gaussian_design(X, Y, Z, U, V, W, sigma):
     if not (n_x == n_y and n_x == n_z and n_b_u == n_b_v and n_b_u == n_b_w and d_z == d_w):
         raise Exception('Invalid argument.')
     
-    means = np.hstack([U, V, W])
-    cov = sigma ** 2 * np.eye(d_x + d_y + d_z)
-    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=np.hstack([X, Y, Z]), mean=mean, cov=cov) for mean in means])
-    b_x = np.sum([scipy.stats.multivariate_normal.pdf(x=X, mean=u, cov=cov[:d_x, :d_x]) for u in U], axis=1)
-    b_y = np.sum([scipy.stats.multivariate_normal.pdf(x=Y, mean=v, cov=cov[d_x:-d_z, d_x:-d_z]) for v in V], axis=1)
-    b_z = np.sum([scipy.stats.multivariate_normal.pdf(x=Z, mean=w, cov=cov[-d_z:, -d_z:]) for w in W], axis=1)
+    d_xyz = d_x + d_y + d_z
+    XYZ = np.hstack([X, Y, Z])
+    UVW = np.hstack([U, V, W])
+    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=XYZ, mean=uvw, cov=sigma ** 2 * np.eye(d_xyz)) for uvw in UVW])
+    b_x = np.sum([scipy.stats.multivariate_normal.pdf(x=X, mean=u, cov=sigma ** 2 * np.eye(d_x)) for u in U], axis=1)
+    b_y = np.sum([scipy.stats.multivariate_normal.pdf(x=Y, mean=v, cov=sigma ** 2 * np.eye(d_y)) for v in V], axis=1)
+    b_z = np.sum([scipy.stats.multivariate_normal.pdf(x=Z, mean=w, cov=sigma ** 2 * np.eye(d_z)) for w in W], axis=1)
     b_xyz = np.sum(A, axis=0)
     b = (b_x * b_y * b_z - b_xyz) / (n_x ** 3 - n_x)
     return A, b
@@ -40,8 +41,9 @@ def mutual_information(X, Y, Z, sigma=1, n_b=200, maxiter=200):
     if not (n_x == n_y and n_x == n_z):
         raise Exception('Invalid argument: the lengths of X and Y must be the same.')
     
-    means = sklearn.cluster.KMeans(n_b).fit(np.hstack([X, Y, Z])).cluster_centers_
-    U, V, W = np.split(means, [d_x, d_x + d_y], axis=1)
+    XYZ = np.hstack([X, Y, Z])
+    UVW = sklearn.cluster.KMeans(n_b).fit(XYZ).cluster_centers_
+    U, V, W = np.split(UVW, [d_x, d_x + d_y], axis=1)
     A, b = create_gaussian_design(X, Y, Z, U, V, W, sigma)
 
     fun = create_objective_function(A)

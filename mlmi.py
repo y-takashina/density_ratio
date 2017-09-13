@@ -1,4 +1,3 @@
-import pdb
 import numpy as np
 import scipy.stats
 import scipy.optimize
@@ -21,11 +20,12 @@ def create_gaussian_design(X, Y, U, V, sigma):
     if n_x != n_y or n_b_u != n_b_v or d_x != d_u or d_y != d_v:
         raise Exception('Invalid argument.')
     
-    means = np.hstack([U, V])
-    cov = sigma ** 2 * np.eye(d_x + d_y)
-    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=np.hstack([X, Y]), mean=mean, cov=cov) for mean in means])
-    b_x = np.sum([scipy.stats.multivariate_normal.pdf(x=X, mean=u, cov=cov[:d_x, :d_x]) for u in U], axis=1)
-    b_y = np.sum([scipy.stats.multivariate_normal.pdf(x=Y, mean=v, cov=cov[-d_y:, -d_y:]) for v in V], axis=1)
+    d_xy = d_x + d_y
+    XY = np.hstack([X, Y])
+    UV = np.hstack([U, V])
+    A = np.transpose([scipy.stats.multivariate_normal.pdf(x=XY, mean=uv, cov=sigma ** 2 * np.eye(d_xy)) for uv in UV])
+    b_x = np.sum([scipy.stats.multivariate_normal.pdf(x=X, mean=u, cov=sigma ** 2 * np.eye(d_x)) for u in U], axis=1)
+    b_y = np.sum([scipy.stats.multivariate_normal.pdf(x=Y, mean=v, cov=sigma ** 2 * np.eye(d_y)) for v in V], axis=1)
     b_xy = np.sum(A, axis=0)
     b = (b_x * b_y - b_xy) / (n_x ** 2 - n_x)
     return A, b
