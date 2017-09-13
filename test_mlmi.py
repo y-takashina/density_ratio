@@ -17,4 +17,5 @@ class TestMlmi(TestCase):
             self.assertAlmostEqual(ami, tmi, delta=0.05)
 
             
-            
+    def test_mlmi3(self):
+        self.fail("not implemented")

@@ -37,8 +37,9 @@ def mutual_information(X, Y, sigma=1, n_b=200, maxiter=200):
     if n_x != n_y:
         raise Exception('Invalid argument: the lengths of X and Y must be the same.')
     
-    means = sklearn.cluster.KMeans(n_b).fit(np.hstack([X, Y])).cluster_centers_
-    U, V = np.split(means, [d_x], axis=1)
+    XY = np.hstack([X, Y])
+    UV = sklearn.cluster.KMeans(n_b).fit(XY).cluster_centers_
+    U, V = np.split(UV, [d_x], axis=1)
     A, b = create_gaussian_design(X, Y, U, V, sigma)
     
     fun = create_objective_function(A)
