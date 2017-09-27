@@ -3,17 +3,17 @@ import scipy.stats
 import sklearn.cluster
 
 
-def norm(mean, sigma):
+def norm(X, mean, sigma):
     cov = np.eye(len(mean)) * sigma
-    return lambda x: scipy.stats.multivariate_normal.pdf(x, mean=mean, cov=cov)
+    return scipy.stats.multivariate_normal.pdf(X, mean=mean, cov=cov)
 
 
 class MutualInformation(object):
-    def __init__(self, sigma=1, lamb=1e-6, b=200):
+    def __init__(self, sigma=1, lamb=1e-6, b=100):
         self._sigma = sigma
         self._lambda = lamb
         self._b = b
-    
+        
     
     def fit(self, X, Y):
         n_x, d_x = X.shape
@@ -23,23 +23,80 @@ class MutualInformation(object):
 
         XY = np.hstack([X, Y])
         n, d = XY.shape
+        b = min(self._b, n)
         
-        #XY_ = np.array([np.hstack([x, y]) for x in X for y in Y]).reshape(n**2, d)
-        XY_ = np.hstack([np.repeat(X, len(Y), axis=0), np.tile(Y, [len(X), 1])])
+        UV = sklearn.cluster.KMeans(b).fit(XY).cluster_centers_
+        U, V = np.split(UV, [d_x], axis=1)
         
-        UV = sklearn.cluster.KMeans(self._b).fit(XY).cluster_centers_
-        bases = [norm(uv, self._sigma) for uv in UV]
-        
-        phi = np.array([b(XY) for b in bases])   # design matrix for observed data
-        phi_ = np.array([b(XY_) for b in bases]) # design matrix for non-observed data
-        H = phi_.dot(phi_.transpose()) / len(XY_)
+        phi_x = np.array([norm(X, u, self._sigma) for u in U])
+        phi_y = np.array([norm(Y, v, self._sigma) for v in V])
+        phi = phi_x * phi_y
         h = np.mean(phi, axis=1)
+        H_x = phi_x.dot(phi_x.transpose()) / n
+        H_y = phi_y.dot(phi_y.transpose()) / n
+        H = H_x * H_y
         
-        alpha = np.linalg.solve(H + self._lambda * np.eye(self._b), h)
+        alpha = np.linalg.solve(H + self._lambda * np.eye(b), h)
         alpha[alpha < 0] = 0
         
-        self.alpha = alpha
-        self.mi = np.mean(np.log(alpha.dot(phi)))
+        self.mi = 0.5 * (h.dot(alpha) - 1)
         
         return self
 
+
+class MutualInformationCV(object):
+    def __init__(self, sigmas, lambdas, b=100):
+        self._sigmas = sigmas
+        self._lambdas = lambdas
+        self._b = b
+        
+    
+    def fit(self, X, Y):
+        n_x, d_x = X.shape
+        n_y, d_y = Y.shape
+        if n_x != n_y:
+            raise Exception()
+        
+        XY = np.hstack([X, Y])
+        n, d = XY.shape
+        b = min(self._b, n)
+        
+        UV = sklearn.cluster.KMeans(b).fit(XY).cluster_centers_
+        U, V = np.split(UV, [d_x], axis=1)
+        
+        score = np.inf
+        for sigma in self._sigmas:
+            phi_x = np.array([norm(X, u, sigma) for u in U])
+            phi_y = np.array([norm(Y, v, sigma) for v in V])
+            phi = phi_x * phi_y
+            h = np.mean(phi, axis=1)
+            H_x = phi_x.dot(phi_x.transpose()) / n
+            H_y = phi_y.dot(phi_y.transpose()) / n
+            H = H_x * H_y
+            
+            for lamb in self._lambdas:
+                A = H + lamb * (n ** 2 - 1) / n ** 2 * np.eye(b)
+                a = np.linalg.solve(A, h)
+                A_inv_phi = np.linalg.solve(A, phi)
+                score_new = 0
+                for i in range(n):
+                    for j in range(5):
+                        phi_ij = phi_x[:, i] * phi_y[:, j]
+                        a_ij = np.linalg.solve(A, phi_ij)
+                        denom = n ** 2 - a_ij.dot(phi_ij)
+                        alpha = (n + 1) / n * (a + phi_ij.dot(a) / denom * a_ij)
+                        alpha -= (n + 1) / n ** 2 * (A_inv_phi[:, i] + phi_ij.dot(A_inv_phi[:, i]) / denom * a_ij)
+                        score_new += phi_ij.dot(alpha) ** 2 / 2 - phi[:, i].dot(alpha)
+                
+                score_new /= n ** 2
+                
+                if score > score_new:
+                    score = score_new
+                    self.sigma_opt = sigma
+                    self.lambda_opt = lamb
+                    theta = np.linalg.solve(H + lamb * np.eye(b), h)
+                    theta[theta < 0] = 0
+                    self.mi = 0.5 * (h.dot(theta) - 1)
+                    print('sigma: %f, lambda: %f, score: %f' % (sigma, lamb, score))
+
+        return self
