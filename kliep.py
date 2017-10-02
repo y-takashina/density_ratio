@@ -9,7 +9,7 @@ def norm(X, mean, sigma):
     return scipy.stats.multivariate_normal.pdf(X, mean=mean, cov=cov)
 
 
-def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
+def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
     
@@ -19,10 +19,10 @@ def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         U, V = np.split(UV, [d_x], axis=1)
         phi_x = np.array([norm(X, u, sigma) for u in U])
         phi_y = np.array([norm(Y, v, sigma) for v in V])
+        phi = phi_x * phi_y
         h_x = np.sum(phi_x, axis=1)
         h_y = np.sum(phi_y, axis=1)
-        H = (phi_x * phi_y).transpose()
-        h_xy = np.sum(H, axis=0)
+        h_xy = np.sum(phi, axis=1)
         h = (h_x * h_y - h_xy) / (n_x ** 2 - n_x)
         
     else:
@@ -35,15 +35,15 @@ def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         h_x = np.sum(phi_x, axis=1)
         h_y = np.sum(phi_y, axis=1)
         h_z = np.sum(phi_z, axis=1)
-        H = (phi_x * phi_y * phi_z).transpose()
-        h_xyz = np.sum(H, axis=0)
+        phi = phi_x * phi_y * phi_z
+        h_xyz = np.sum(phi, axis=1)
         h = (h_x * h_y * h_z - h_xyz) / (n_x ** 3 - n_x)
 
     def fun(alpha):
-        return -np.sum(np.log(H.dot(alpha)))
+        return -np.sum(np.log(alpha.dot(phi)))
         
     def jac(alpha):
-        return -H.transpose().dot(1 / H.dot(alpha))
+        return -phi.dot(1 / alpha.dot(phi))
     
     bounds = [(0, None)] * b
     constraints = [{'type': 'eq', 'fun': lambda alpha: alpha.dot(h) - 1}]
@@ -59,5 +59,5 @@ def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
     if not result.success:
         raise Exception('Optimization failed.')
         
-    return np.mean(np.log(H.dot(result.x)))
+    return np.mean(np.log(result.x.dot(phi)))
 
