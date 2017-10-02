@@ -9,7 +9,7 @@ def norm(X, mean, sigma):
     return scipy.stats.multivariate_normal.pdf(X, mean=mean, cov=cov)
 
 
-def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=100):
+def mutual_information_kliep(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
     
