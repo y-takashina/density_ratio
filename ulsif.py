@@ -41,7 +41,9 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, lamb=1e-3):
         
     alpha = np.linalg.solve(H + lamb * np.eye(b), h)
     alpha[alpha < 0] = 0
-    return np.mean(np.log(alpha.dot(phi)))
+    
+    #return np.mean(np.log(alpha.dot(phi)))
+    return 0.5 * (h.dot(alpha) - 1)
 
 
 class MutualInformation(object):
