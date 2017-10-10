@@ -25,6 +25,7 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         h_xy = np.sum(phi, axis=1)
         h = (h_x * h_y - h_xy) / (n_x ** 2 - n_x)
         
+        
     else:
         XYZ = np.hstack([X, Y, Z])
         UVW = sklearn.cluster.KMeans(b).fit(XYZ).cluster_centers_
@@ -32,10 +33,10 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         phi_x = np.array([norm(X, u, sigma) for u in U])
         phi_y = np.array([norm(Y, v, sigma) for v in V])
         phi_z = np.array([norm(Z, w, sigma) for w in W])
+        phi = phi_x * phi_y * phi_z
         h_x = np.sum(phi_x, axis=1)
         h_y = np.sum(phi_y, axis=1)
         h_z = np.sum(phi_z, axis=1)
-        phi = phi_x * phi_y * phi_z
         h_xyz = np.sum(phi, axis=1)
         h = (h_x * h_y * h_z - h_xyz) / (n_x ** 3 - n_x)
 

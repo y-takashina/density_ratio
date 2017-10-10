@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats
 import sklearn.cluster
+import cvxopt
 
 
 def norm(X, mean, sigma):
@@ -42,8 +43,8 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, lamb=1e-3):
     alpha = np.linalg.solve(H + lamb * np.eye(b), h)
     alpha[alpha < 0] = 0
     
-    #return np.mean(np.log(alpha.dot(phi)))
-    return 0.5 * (h.dot(alpha) - 1)
+    return np.mean(np.log(alpha.dot(phi)))
+    #return 0.5 * (h.dot(alpha) - 1)
 
 
 class MutualInformation(object):
@@ -99,15 +100,16 @@ class MutualInformation(object):
         alpha = np.linalg.solve(H + self._lambda * np.eye(b), h)
         alpha[alpha < 0] = 0
         
-        self.mi = 0.5 * (h.dot(alpha) - 1)
+        #self.mi = 0.5 * (h.dot(alpha) - 1)
+        self.mi = np.mean(np.log(alpha.dot(phi)))
         
         return self
 
 
 class MutualInformationCV(object):
     def __init__(self, b=100, sigmas=None, lambdas=None):
-        self._sigmas = sigmas or [1e-2, 5e-2, 0.1, 0.3, 0.5, 1, 2, 5]
-        self._lambdas = lambdas or [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
+        self._sigmas = sigmas or [0.05, 0.1, 0.3, 0.5, 1, 2, 5]
+        self._lambdas = lambdas or [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
         self._b = b
         
     
@@ -155,9 +157,10 @@ class MutualInformationCV(object):
                     score = score_new
                     self.sigma_opt = sigma
                     self.lambda_opt = lamb
-                    theta = np.linalg.solve(H + lamb * np.eye(b), h)
-                    theta[theta < 0] = 0
-                    self.mi = 0.5 * (h.dot(theta) - 1)
+                    alpha = np.linalg.solve(H + lamb * np.eye(b), h)
+                    alpha[alpha < 0] = 0
+                    self.mi = np.mean(np.log(alpha.dot(phi)))
+                    #self.mi = 0.5 * (h.dot(alpha) - 1)
                     print('sigma: %f, lambda: %f, score: %f' % (sigma, lamb, score))
 
         return self
