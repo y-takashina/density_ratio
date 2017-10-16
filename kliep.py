@@ -1,3 +1,4 @@
+import tqdm
 import numpy as np
 import scipy.stats
 import scipy.optimize
@@ -12,6 +13,7 @@ def norm(X, mean, sigma):
 def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
+    b = min(b, n_x)
     
     if Z is None:
         XY = np.hstack([X, Y])
@@ -24,7 +26,6 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         h_y = np.sum(phi_y, axis=1)
         h_xy = np.sum(phi, axis=1)
         h = (h_x * h_y - h_xy) / (n_x ** 2 - n_x)
-        
         
     else:
         XYZ = np.hstack([X, Y, Z])
@@ -62,3 +63,29 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, maxiter=1000):
         
     return np.mean(np.log(result.x.dot(phi)))
 
+
+def calc_mi_matrix(X):
+    d = len(X[0])
+    mi = np.zeros([d, d])
+    for i, j in tqdm.tqdm([(i, j) for i in range(d) for j in range(d) if i > j]):
+        x_i = X[:, i].reshape(-1, 1)
+        x_j = X[:, j].reshape(-1, 1)
+        mi[i, j] = mi[j, i] = mutual_information(X=x_i, Y=x_j, maxiter=1000)
+    
+    return mi
+
+
+def calc_cmi_matrix(X):
+    d = len(X[0])
+    cmi = np.zeros([d, d])
+    for i, j in tqdm.tqdm([(i, j) for i in range(d) for j in range(d) if i > j]):
+        x_i = X[:, i].reshape(-1, 1)
+        x_j = X[:, j].reshape(-1, 1)
+        x_rest = X[:, (np.arange(d) != i) & (np.arange(d) != j)]
+        mi_xz = mutual_information(X=x_i, Y=x_rest, maxiter=1000)
+        mi_yz = mutual_information(X=x_j, Y=x_rest, maxiter=1000)
+        mi_xyz = mutual_information(X=x_i, Y=x_j, Z=x_rest, maxiter=1000)
+        cmi[i, j] = cmi[j, i] = mi_xyz - (mi_xz + mi_yz)
+
+    cmi[cmi < 0] = 0
+    return cmi
