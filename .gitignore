@@ -3,6 +3,7 @@ __pycache__
 
 *.csv
 *.png
+*.pdf
 nohup.out
 
 
