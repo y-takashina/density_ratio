@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import scipy.stats
 import sklearn.cluster
@@ -21,9 +22,9 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, lamb=1e-3):
         phi_x = np.array([norm(X, u, sigma) for u in U])
         phi_y = np.array([norm(Y, v, sigma) for v in V])
         phi = phi_x * phi_y
-        H_x = phi_x.dot(phi_x.transpose()) / n_x
-        H_y = phi_y.dot(phi_y.transpose()) / n_x
-        H = H_x * H_y
+        H_x = phi_x.dot(phi_x.transpose())
+        H_y = phi_y.dot(phi_y.transpose())
+        H = H_x * H_y / (n_x ** 2)
         h = np.mean(phi, axis=1)
         
     else:
@@ -34,17 +35,17 @@ def mutual_information(X, Y, Z=None, b=100, sigma=1, lamb=1e-3):
         phi_y = np.array([norm(Y, v, sigma) for v in V])
         phi_z = np.array([norm(Z, w, sigma) for w in W])
         phi = phi_x * phi_y * phi_z
-        H_x = phi_x.dot(phi_x.transpose()) / n_x
-        H_y = phi_y.dot(phi_y.transpose()) / n_x
-        H_z = phi_z.dot(phi_z.transpose()) / n_x
-        H = H_x * H_y * H_z
+        H_x = phi_x.dot(phi_x.transpose())
+        H_y = phi_y.dot(phi_y.transpose())
+        H_z = phi_z.dot(phi_z.transpose())
+        H = H_x * H_y * H_z / (n_x ** 3)
         h = np.mean(phi, axis=1)
         
     alpha = np.linalg.solve(H + lamb * np.eye(b), h)
     alpha[alpha < 0] = 0
     
-    return np.mean(np.log(alpha.dot(phi)))
-    #return 0.5 * (h.dot(alpha) - 1)
+#    return np.mean(np.log(alpha.dot(phi)))
+    return 0.5 * (np.mean(alpha.dot(phi)) - 1)
 
 
 class MutualInformation(object):
