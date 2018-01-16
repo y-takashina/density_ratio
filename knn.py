@@ -43,6 +43,8 @@ def cmi_4h(X, Y, Z, k=3):
 
 
 def mi_knn(X, Y, k=3):
+    if X.size == 0 or Y.size == 0:
+        return 0
     n_x, d_x = X.shape
     n_y, d_y = Y.shape
     n = n_x
@@ -53,43 +55,43 @@ def mi_knn(X, Y, k=3):
     ks = np.repeat(k, n)
     indices_discrete = np.isclose(epsilons, 0)
     ks[indices_discrete] = np.sum(np.isclose(distances, 0), axis=1)[indices_discrete] - 1 # 自分を除く
-    n_x = np.sum(distances_x <= epsilons, axis=0)
-    n_y = np.sum(distances_y <= epsilons, axis=0)
+    n_x = np.sum(distances_x <= epsilons, axis=0) # 自分を含むので元々本来の値より 1 大きい
+    n_y = np.sum(distances_y <= epsilons, axis=0) # 同上
     mi = np.mean(scipy.special.digamma(ks))
-    mi += np.log(n) - np.mean(np.log(n_x) + np.log(n_y)) # 自分を含むので元々本来の n_x, n_y より 1 大きい
+    mi += np.log(n) - np.mean(np.log(n_x) + np.log(n_y))
     return mi
 
 
 def cmi_knn(X, Y, Z, k=3):
-    if Z is None or Z.size == 0:
+    if Z.size == 0:
         return mi_knn(X, Y, k)
     XZ = np.hstack([X, Z])
     return mi_knn(XZ, Y, k) - mi_knn(Z, Y, k)
 
 
-def learn_mrf(X, threshold=1, verbose=True, max_edges=None):
+def learn_mrf(X, verbose=True, alpha=0.0, k=10):
     n, d = X.shape
     edges = []
-    loss = 0
-    losses = [0]
     while True:
         max_cmi = -np.inf
-        for i in range(d - 1):
-            neighbour = [edge[0] for edge in edges if edge[1] == i and edge[0] > i]
-            neighbour += [edge[1] for edge in edges if edge[0] == i and edge[1] > i]
-            non_neighbour = set(range(i + 1, d)) - set(neighbour)
+        cmis = np.zeros([d, d])
+        for i in range(d):
+            neighbour = [edge[0] for edge in edges if edge[1] == i]
+            neighbour += [edge[1] for edge in edges if edge[0] == i]
+            non_neighbour = set(range(d)) - set(neighbour) - set([i])
             x = X[:, [i]]
             z = X[:, neighbour]
             for j in non_neighbour:
+                if i == j:
+                    continue
                 y = X[:, [j]]
-                cmi = cmi_knn(x, y, z, k=10)
-                if cmi > max_cmi:
-                    max_pair = (i, j)
-                    max_cmi = cmi
+                cmis[i, j] = cmi_knn(x, y, z, k=k)
 
-        if max_cmi <= 0 or len(edges) == d * (d - 1) / 2:
-            return edges, losses
+        cmis = cmis + cmis.transpose()
+        idx = cmis.argmax()
+        max_pair = int(idx / d), idx % d
+        max_cmi = cmis[max_pair]
+        if max_cmi <= alpha or len(edges) == d * (d - 1) / 2:
+            return edges
         
-        loss -= max_cmi
         edges += [max_pair]
-        losses += [loss]
